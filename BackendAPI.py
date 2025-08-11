@@ -38,13 +38,14 @@ max_data_points = 100
 
 
 registered_streams = []
-registered_names=[]
+registered_names = []
+
 
 class Stream:
     def __init__(self, channel, id, name, colour):
         self.channel = channel
         self.id = id
-        self.name = self.name = name
+        self.name = name
         self.colour = colour
         registered_streams.append(self)
         registered_names.append(id)
@@ -57,42 +58,25 @@ class Stream:
                 new_point = json.loads(message["data"])
                 socketio.emit(self.id, new_point, room=self.id)
 
+
 # cpu_temp
 # cpu_usage
 # humidity
 # temperature
 # moisture
 
-Stream(
-    channel="cpu_temp_channel",
-    id="cpu_temp",
-    name="CPU temperature",
-    colour="FF0000"
-)
-Stream(
-    channel="cpu_usage_channel",
-    id="cpu_usage",
-    name="CPU usage",
-    colour="00FF00"
-)
-Stream(
-    channel="humidity_channel",
-    id="humidity",
-    name="Humidity",
-    colour="0000FF"
-)
+# Stream(
+#     channel="cpu_temp_channel", id="cpu_temp", name="CPU temperature", colour="#FF0000"
+# )
+Stream(channel="cpu_usage_channel", id="cpu_usage", name="CPU usage", colour="#00FF00")
+Stream(channel="humidity_channel", id="humidity", name="Humidity", colour="#0000FF")
 Stream(
     channel="temperature_channel",
     id="temperature",
     name="Temperature",
-    colour="FFFF00"
+    colour="#FFFF00",
 )
-Stream(
-    channel="moisture_channel",
-    id="moisture",
-    name="Moisture",
-    colour="00FFFF"
-)
+Stream(channel="moisture_channel", id="moisture", name="Moisture", colour="#00FFFF")
 
 
 def get_cpu_temperature():
@@ -159,11 +143,11 @@ def cpu_temp_publisher():
         time.sleep(5)
 
 
-
 @socketio.on("subscribe")
 def handle_subscribe(data):
     stream = data.get("stream")
-    if stream in registered_streams:
+
+    if stream in [s.id for s in registered_streams]:
         join_room(stream)
         # Send the last N points immediately from Redis
         key = f"{stream}_data"
@@ -179,7 +163,7 @@ def handle_subscribe(data):
 @socketio.on("unsubscribe")
 def handle_unsubscribe(data):
     stream = data.get("stream")
-    if stream in registered_streams:
+    if stream in [s.id for s in registered_streams]:
         leave_room(stream)
 
 
@@ -189,7 +173,9 @@ def get_streams():
     # Define available streams with friendly names and colors
     available_streams = []
     for stream in registered_streams:
-        available_streams.append({"id" : stream.id, "name": stream.name, "colour": stream.colour})
+        available_streams.append(
+            {"id": stream.id, "name": stream.name, "colour": stream.colour}
+        )
     return jsonify(available_streams)
 
 
@@ -246,7 +232,6 @@ def simulate_data():
 
     humidity = {"value": random.randint(0, 50), "date": time.time()}
     temperature = {"value": random.randint(50, 100), "date": time.time()}
-
 
     # Store and publish humidity
     redis_client.publish("humidity_channel", json.dumps(humidity))
@@ -313,7 +298,7 @@ def button():
 
 if __name__ == "__main__":
     for stream in registered_streams:
-        threading.Thread(target=stream.listener,daemon=True).start()
+        threading.Thread(target=stream.listener, daemon=True).start()
 
     # Start CPU temperature publisher
     # threading.Thread(target=cpu_usage_pubsub_listener, daemon=True).start()
